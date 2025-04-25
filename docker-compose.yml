@@ -45,6 +45,7 @@ services:
       dockerfile: Dockerfile
     volumes:
       - ./react:/app
+      - /app/node_modules
     environment:
       # se Vite, caminho interno para a API
       VITE_API_BASE_URL: http://app:8000/api

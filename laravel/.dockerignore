@@ -1,0 +1,9 @@
+# Não copie dependências locais
+node_modules
+vendor
+# IDE/editor cruft
+.git
+.idea
+*.log
+# Build output do React
+../react

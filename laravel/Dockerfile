@@ -9,3 +9,13 @@ RUN apt-get update && apt-get install -y \
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www
+
+# Copia o código
+COPY . .
+
+# Instala dependências PHP
+RUN composer install --no-interaction --optimize-autoloader
+
+# Garante que as migrations rodem na inicialização
+COPY wait-for-db.sh /usr/local/bin/wait-for-db.sh
+ENTRYPOINT ["wait-for-db.sh"]

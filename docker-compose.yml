@@ -1,31 +1,58 @@
 version: '3.8'
 
 services:
+  db:
+    image: mysql:8.0
+    environment:
+      MYSQL_DATABASE:      carteira
+      MYSQL_USER:          carteira
+      MYSQL_PASSWORD:      secret
+      MYSQL_ROOT_PASSWORD: secret
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD","mysqladmin","ping","-h","localhost"]
+      interval: 10s
+      retries: 5
+
   app:
     build:
-      context: .
-      dockerfile: docker/Dockerfile
-    container_name: carteira_app
+      context: ./laravel
+      dockerfile: Dockerfile
     volumes:
       - ./laravel:/var/www
+    environment:
+      DB_HOST: db
+      DB_DATABASE: carteira
+      DB_USERNAME: carteira
+      DB_PASSWORD: secret
     ports:
       - "8000:8000"
     depends_on:
-      - db
-    command: php artisan serve --host=0.0.0.0 --port=8000
+      db:
+        condition: service_healthy
+    # versão com wait-loop inline:
+    command: >
+      sh -c "
+        until mysqladmin ping -hdb --silent; do sleep 2; done;
+        php artisan migrate --force;
+        php artisan serve --host=0.0.0.0 --port=8000
+      "
 
-  db:
-    image: mysql:8.0
-    container_name: carteira_db
-    environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: carteira
-      MYSQL_USER: laravel
-      MYSQL_PASSWORD: secret
-    ports:
-      - "3306:3306"
+  react:
+    build:
+      context: ./react
+      dockerfile: Dockerfile
     volumes:
-      - dbdata:/var/lib/mysql
+      - ./react:/app
+      - /app/node_modules
+    environment:
+      # se Vite, caminho interno para a API
+      VITE_API_BASE_URL: http://app:8000/api
+    ports:
+      - "3000:3000"
+    depends_on:
+      - app
 
 volumes:
-  dbdata:
+  db_data:

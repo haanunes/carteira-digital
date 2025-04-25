@@ -26,12 +26,12 @@ services:
       DB_DATABASE: carteira
       DB_USERNAME: carteira
       DB_PASSWORD: secret
-    ports:
-      - "8000:8000"
+    # expõe só na rede interna, sem mapeamento externo
+    expose:
+      - "8000"
     depends_on:
       db:
         condition: service_healthy
-    # versão com wait-loop inline:
     command: >
       sh -c "
         until mysqladmin ping -hdb --silent; do sleep 2; done;
@@ -47,12 +47,23 @@ services:
       - ./react:/app
       - /app/node_modules
     environment:
-      # se Vite, caminho interno para a API
-      VITE_API_BASE_URL: http://app:8000/api
-    ports:
-      - "3000:3000"
+      # VITE_API_BASE_URL passa a ser relativo ao proxy
+      VITE_API_BASE_URL: /api
+    # expõe só na rede interna, sem mapeamento externo
+    expose:
+      - "3000"
     depends_on:
       - app
+
+  proxy:
+    image: nginx:alpine
+    ports:
+      - "80:80"          # toda a aplicação sai em http://localhost
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - app
+      - react
 
 volumes:
   db_data:
